@@ -1,25 +1,6 @@
 use actix_web::{post, HttpResponse, Responder};
+use cargo_manifest::{Manifest, MaybeInherited};
 use serde::Deserialize;
-use toml::{value::Table, Value};
-
-#[derive(serde::Deserialize, Debug)]
-struct Toml {
-    package: Package,
-}
-
-#[derive(serde::Deserialize, Debug)]
-struct Package {
-    name: Option<String>,
-    authors: Option<Vec<String>>,
-    keywords: Option<Vec<String>>,
-
-    metadata: Option<Metadata>,
-}
-
-#[derive(serde::Deserialize, Debug)]
-struct Metadata {
-    orders: Vec<Value>,
-}
 
 #[derive(serde::Deserialize, Debug)]
 struct Order {
@@ -29,18 +10,33 @@ struct Order {
 
 #[post("/5/manifest")]
 pub async fn task_1(body: String) -> impl Responder {
-    let Ok(toml): Result<Toml, _> = toml::from_str(&body) else {
+    let Ok(toml): Result<Manifest, _> = toml::from_str(&body) else {
         println!("body: {body}");
-        return HttpResponse::NoContent().finish();
+        return HttpResponse::BadRequest().body("Invalid manifest");
     };
     println!("{:?}", toml);
-    let Some(metadata) = toml.package.metadata else {
+    let Some(package) = toml.package else {
+        return HttpResponse::NoContent().finish();
+    };
+    let Some(MaybeInherited::Local(keywords)) = package.keywords else {
+        return HttpResponse::BadRequest().body("Magic keyword not provided");
+    };
+    if !keywords.contains(&"Christmas 2024".to_string()) {
+        return HttpResponse::BadRequest().body("Magic keyword not provided");
+    }
+    let Some(metadata) = package.metadata else {
+        return HttpResponse::NoContent().finish();
+    };
+    let Some(orders_field) = metadata.get("orders") else {
+        return HttpResponse::NoContent().finish();
+    };
+    let Some(orders_table) = orders_field.as_array() else {
         return HttpResponse::NoContent().finish();
     };
 
     let mut orders = vec![];
-    for table in metadata.orders {
-        let Ok(order): Result<Order, _> = Order::deserialize(table) else {
+    for table in orders_table {
+        let Ok(order): Result<Order, _> = Order::deserialize(table.clone()) else {
             continue;
         };
         if order.item.is_none() || order.quantity.is_none() {
