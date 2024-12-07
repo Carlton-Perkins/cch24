@@ -1,4 +1,4 @@
-use actix_web::{post, HttpResponse, Responder};
+use actix_web::{post, HttpRequest, HttpResponse, Responder};
 use cargo_manifest::{Manifest, MaybeInherited};
 use serde::Deserialize;
 
@@ -9,13 +9,36 @@ struct Order {
 }
 
 #[post("/5/manifest")]
-pub async fn task_1(body: String) -> impl Responder {
-    let Ok(toml): Result<Manifest, _> = toml::from_str(&body) else {
-        println!("body: {body}");
-        return HttpResponse::BadRequest().body("Invalid manifest");
+pub async fn task_1(body: String, req: HttpRequest) -> impl Responder {
+    let ct = req.headers().get("Content-Type");
+    let manifest = match ct {
+        Some(ct) if ct == "application/json" => {
+            let Ok(manifest): Result<Manifest, _> = serde_json::from_str(&body) else {
+                println!("body: {body}");
+                return HttpResponse::BadRequest().body("Invalid manifest");
+            };
+            manifest
+        }
+        Some(ct) if ct == "application/toml" => {
+            let Ok(manifest): Result<Manifest, _> = toml::from_str(&body) else {
+                println!("body: {body}");
+                return HttpResponse::BadRequest().body("Invalid manifest");
+            };
+            manifest
+        }
+        Some(ct) if ct == "application/yaml" => {
+            let Ok(manifest): Result<Manifest, _> = serde_yaml::from_str(&body) else {
+                println!("body: {body}");
+                return HttpResponse::BadRequest().body("Invalid manifest");
+            };
+            manifest
+        }
+        _ => {
+            return HttpResponse::UnsupportedMediaType().finish();
+        }
     };
-    println!("{:?}", toml);
-    let Some(package) = toml.package else {
+    println!("{:?}", manifest);
+    let Some(package) = manifest.package else {
         return HttpResponse::NoContent().finish();
     };
     let Some(MaybeInherited::Local(keywords)) = package.keywords else {
