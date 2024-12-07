@@ -1,4 +1,5 @@
 mod day_start;
+mod day_two;
 
 use actix_web::web::ServiceConfig;
 use shuttle_actix_web::ShuttleActixWeb;
@@ -8,6 +9,10 @@ async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clon
     let config = move |cfg: &mut ServiceConfig| {
         cfg.service(day_start::day_start);
         cfg.service(day_start::seek);
+        cfg.service(day_two::task_1);
+        cfg.service(day_two::task_2);
+        cfg.service(day_two::task_3_dest);
+        cfg.service(day_two::task_3_key);
     };
 
     Ok(config.into())
