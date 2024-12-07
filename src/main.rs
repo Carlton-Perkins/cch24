@@ -1,3 +1,4 @@
+mod day_five;
 mod day_start;
 mod day_two;
 
@@ -13,6 +14,7 @@ async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clon
         cfg.service(day_two::task_2);
         cfg.service(day_two::task_3_dest);
         cfg.service(day_two::task_3_key);
+        cfg.service(day_five::task_1);
     };
 
     Ok(config.into())
