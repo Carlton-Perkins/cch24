@@ -1,1 +1,1 @@
-~/.cargo/bin/cch24-validator -1 2 5
+~/.cargo/bin/cch24-validator -1 2 5 9
