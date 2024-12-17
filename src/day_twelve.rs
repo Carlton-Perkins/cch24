@@ -5,6 +5,7 @@ use actix_web::{
     web::{Data, Path},
     HttpResponse, Responder,
 };
+use rand::Rng;
 use serde::Deserialize;
 
 #[get("/12/board")]
@@ -38,6 +39,13 @@ pub async fn place(path: Path<(Team, u8)>, board_data: Data<BoardData>) -> impl 
 pub async fn reset(board_data: Data<BoardData>) -> impl Responder {
     let mut b = board_data.lock().unwrap();
     *b = Board::new();
+    HttpResponse::Ok().body(b.to_string())
+}
+
+#[get("/12/random-board")]
+pub async fn random_board(board_data: Data<BoardData>) -> impl Responder {
+    let mut b = board_data.lock().unwrap();
+    b.random();
     HttpResponse::Ok().body(b.to_string())
 }
 
@@ -86,6 +94,7 @@ impl Team {
 }
 
 pub struct Board {
+    rng: rand::rngs::StdRng,
     board: Vec<Tile>,
 }
 
@@ -93,6 +102,7 @@ impl Board {
     pub fn new() -> Self {
         const SIZE: usize = 4;
         Board {
+            rng: rand::SeedableRng::seed_from_u64(2024),
             board: vec![Tile::Empty; SIZE * SIZE],
         }
     }
@@ -174,6 +184,18 @@ impl Board {
             (true, true, _) => State::None,
             (false, false, 16) => State::None,
             _ => State::Incomplete,
+        }
+    }
+
+    pub fn random(&mut self) {
+        const SIZE: usize = 4;
+        for i in 0..SIZE * SIZE {
+            let state = self.rng.gen::<bool>();
+            if state {
+                self.board[i] = Tile::Cookie;
+            } else {
+                self.board[i] = Tile::Milk;
+            }
         }
     }
 }

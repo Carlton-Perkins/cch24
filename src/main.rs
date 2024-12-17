@@ -39,7 +39,8 @@ async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clon
                 .app_data(board_data)
                 .service(day_twelve::board)
                 .service(day_twelve::reset)
-                .service(day_twelve::place),
+                .service(day_twelve::place)
+                .service(day_twelve::random_board),
         );
     };
 

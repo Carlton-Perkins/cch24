@@ -1949,6 +1949,7 @@ dependencies = [
  "anyhow",
  "cargo-manifest",
  "leaky-bucket",
+ "rand",
  "serde",
  "serde_json",
  "serde_yaml",
