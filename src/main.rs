@@ -1,6 +1,7 @@
 mod day_five;
 mod day_nine;
 mod day_start;
+mod day_twelve;
 mod day_two;
 
 use actix_web::{
@@ -12,6 +13,7 @@ use shuttle_actix_web::ShuttleActixWeb;
 #[shuttle_runtime::main]
 async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clone + 'static> {
     let milk_crate = Data::new(day_nine::MilkCrate::new());
+    let board_data = Data::new(day_twelve::board_data());
     let config = move |cfg: &mut ServiceConfig| {
         cfg.service(
             actix_web::Scope::new("")
@@ -25,7 +27,10 @@ async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clon
                 .service(day_five::task_1)
                 .app_data(milk_crate)
                 .service(day_nine::milk)
-                .service(day_nine::refill),
+                .service(day_nine::refill)
+                .app_data(board_data)
+                .service(day_twelve::board)
+                .service(day_twelve::reset),
         );
     };
 
