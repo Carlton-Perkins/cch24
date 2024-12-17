@@ -1,4 +1,9 @@
-use std::{sync::Mutex, time::Duration};
+use std::{
+    cell::RefCell,
+    ops::DerefMut,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use actix_web::{
     post,
@@ -8,6 +13,12 @@ use actix_web::{
 use leaky_bucket::RateLimiter;
 use serde::{Deserialize, Serialize};
 
+pub type MilkBox = Arc<MilkCrate>;
+
+pub fn new_milk_box() -> MilkBox {
+    Arc::new(MilkCrate::new())
+}
+
 pub struct MilkCrate {
     pub ratelimit: Mutex<RateLimiter>,
 }
@@ -16,15 +27,29 @@ impl MilkCrate {
     pub fn new() -> Self {
         println!("made new milk crate");
         Self {
-            ratelimit: Mutex::new(
-                RateLimiter::builder()
-                    .initial(5)
-                    .interval(Duration::from_secs(1))
-                    .max(5)
-                    .build(),
-            ),
+            ratelimit: Mutex::new(build_rate_limiter()),
         }
     }
+}
+
+impl MilkCrate {
+    fn get(&self) -> bool {
+        let mut mc = self.ratelimit.lock().unwrap();
+        true
+    }
+
+    fn refill(&self) {
+        let mut mc = self.ratelimit.lock().expect("failed to lock milk crate");
+        *mc.deref_mut() = build_rate_limiter();
+    }
+}
+
+fn build_rate_limiter() -> RateLimiter {
+    RateLimiter::builder()
+        .initial(5)
+        .interval(Duration::from_secs(1))
+        .max(5)
+        .build()
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -87,4 +112,10 @@ pub async fn milk(
         }
         _ => HttpResponse::Ok().body("Milk withdrawn\n"),
     }
+}
+
+#[post("/9/refill")]
+pub async fn refill(milk_crate: Data<MilkCrate>) -> impl Responder {
+    milk_crate.refill();
+    HttpResponse::Ok()
 }

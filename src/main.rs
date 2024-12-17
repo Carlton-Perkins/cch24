@@ -24,7 +24,8 @@ async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clon
                 .service(day_two::task_3_key)
                 .service(day_five::task_1)
                 .app_data(milk_crate)
-                .service(day_nine::milk),
+                .service(day_nine::milk)
+                .service(day_nine::refill),
         );
     };
 
