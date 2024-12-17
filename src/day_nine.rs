@@ -33,9 +33,12 @@ impl MilkCrate {
 enum Convert {
     Liters(f32),
     Gallons(f32),
+    Litres(f32),
+    Pints(f32),
 }
 
 const LITER_TO_GALLON: f32 = 0.26417206;
+const LITRES_TO_PINT: f32 = 1.759756969;
 
 #[post("/9/milk")]
 pub async fn milk(
@@ -69,6 +72,16 @@ pub async fn milk(
                     let liters = g as f32 / LITER_TO_GALLON;
                     let liters = Convert::Liters(liters);
                     HttpResponse::Ok().body(serde_json::to_string(&liters).unwrap())
+                }
+                Convert::Litres(l) => {
+                    let pints = l as f32 * LITRES_TO_PINT;
+                    let pints = Convert::Pints(pints);
+                    HttpResponse::Ok().body(serde_json::to_string(&pints).unwrap())
+                }
+                Convert::Pints(p) => {
+                    let litres = p as f32 / LITRES_TO_PINT;
+                    let litres = Convert::Litres(litres);
+                    HttpResponse::Ok().body(serde_json::to_string(&litres).unwrap())
                 }
             }
         }
