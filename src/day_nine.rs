@@ -1,9 +1,4 @@
-use std::{
-    cell::RefCell,
-    ops::DerefMut,
-    sync::{Arc, Mutex},
-    time::Duration,
-};
+use std::{ops::DerefMut, sync::Mutex, time::Duration};
 
 use actix_web::{
     post,
@@ -12,12 +7,6 @@ use actix_web::{
 };
 use leaky_bucket::RateLimiter;
 use serde::{Deserialize, Serialize};
-
-pub type MilkBox = Arc<MilkCrate>;
-
-pub fn new_milk_box() -> MilkBox {
-    Arc::new(MilkCrate::new())
-}
 
 pub struct MilkCrate {
     pub ratelimit: Mutex<RateLimiter>,
@@ -34,8 +23,10 @@ impl MilkCrate {
 
 impl MilkCrate {
     fn get(&self) -> bool {
-        let mut mc = self.ratelimit.lock().unwrap();
-        true
+        let mc = self.ratelimit.lock().unwrap();
+        let any_left = mc.try_acquire(1);
+
+        any_left
     }
 
     fn refill(&self) {
@@ -71,10 +62,7 @@ pub async fn milk(
     milk_crate: Data<MilkCrate>,
     req: HttpRequest,
 ) -> impl Responder {
-    let mc = milk_crate.ratelimit.lock().unwrap();
-    println!("{}", mc.balance());
-    let any_left = mc.try_acquire(1);
-    println!("{any_left}, {}", mc.balance());
+    let any_left = milk_crate.get();
     if !any_left {
         return HttpResponse::TooManyRequests().body("No milk available\n");
     }
