@@ -6,7 +6,8 @@ mod day_two;
 
 use actix_web::{
     middleware::Logger,
-    web::{Data, ServiceConfig},
+    web::{Data, PathConfig, ServiceConfig},
+    HttpResponse,
 };
 use shuttle_actix_web::ShuttleActixWeb;
 
@@ -18,6 +19,13 @@ async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clon
         cfg.service(
             actix_web::Scope::new("")
                 .wrap(Logger::default())
+                .app_data(PathConfig::default().error_handler(|err, _req| {
+                    actix_web::error::InternalError::from_response(
+                        err,
+                        HttpResponse::BadRequest().into(),
+                    )
+                    .into()
+                }))
                 .service(day_start::day_start)
                 .service(day_start::seek)
                 .service(day_two::task_1)
@@ -30,7 +38,8 @@ async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clon
                 .service(day_nine::refill)
                 .app_data(board_data)
                 .service(day_twelve::board)
-                .service(day_twelve::reset),
+                .service(day_twelve::reset)
+                .service(day_twelve::place),
         );
     };
 
