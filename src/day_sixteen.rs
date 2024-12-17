@@ -21,6 +21,10 @@ const ENCODE_KEY: LazyCell<jsonwebtoken::EncodingKey> =
     LazyCell::new(|| jsonwebtoken::EncodingKey::from_secret(SECRET));
 const DECODE_KEY: LazyCell<jsonwebtoken::DecodingKey> =
     LazyCell::new(|| jsonwebtoken::DecodingKey::from_secret(SECRET));
+const SANTA_KEY: LazyCell<jsonwebtoken::DecodingKey> = LazyCell::new(|| {
+    jsonwebtoken::DecodingKey::from_rsa_pem(include_bytes!("../day16_santa_public_key.pem"))
+        .unwrap()
+});
 
 #[post("/16/wrap")]
 pub async fn wrap(data: Json<Value>, store: Data<GiftStore>) -> impl Responder {
@@ -39,10 +43,15 @@ pub async fn unwrap(req: HttpRequest, store: Data<GiftStore>) -> impl Responder 
         return HttpResponse::BadRequest().finish();
     };
     let jwt = cookie.value();
-    let mut vaidation = Validation::new(jsonwebtoken::Algorithm::HS256);
-    vaidation.required_spec_claims.clear();
+    let Ok(headers) = jsonwebtoken::decode_header(&jwt) else {
+        println!("Failed to decode JWT header");
+        return HttpResponse::BadRequest().finish();
+    };
+    println!("Headers {headers:?}");
+    let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256);
+    validation.required_spec_claims.clear();
 
-    let Ok(claims) = jsonwebtoken::decode::<Claims>(&jwt, &DECODE_KEY, &vaidation) else {
+    let Ok(claims) = jsonwebtoken::decode::<Claims>(&jwt, &DECODE_KEY, &validation) else {
         println!("Failed to decode JWT");
         return HttpResponse::BadRequest().finish();
     };
@@ -54,6 +63,32 @@ pub async fn unwrap(req: HttpRequest, store: Data<GiftStore>) -> impl Responder 
     };
 
     HttpResponse::Ok().body(data.to_string())
+}
+
+#[post("/16/decode")]
+pub async fn decode(jwt: String) -> impl Responder {
+    let Ok(headers) = jsonwebtoken::decode_header(&jwt) else {
+        println!("Failed to decode JWT header");
+        return HttpResponse::BadRequest().finish();
+    };
+    let algo = headers.alg;
+
+    let mut validation = Validation::new(algo);
+    validation.required_spec_claims.clear();
+
+    let token = match jsonwebtoken::decode::<Value>(&jwt, &SANTA_KEY, &validation) {
+        Ok(token) => token,
+        Err(e) if e.kind() == &jsonwebtoken::errors::ErrorKind::InvalidSignature => {
+            println!("Invalid signature");
+            return HttpResponse::Unauthorized().finish();
+        }
+        Err(e) => {
+            println!("Failed to decode JWT: {}", e);
+            return HttpResponse::BadRequest().finish();
+        }
+    };
+
+    HttpResponse::Ok().body(token.claims.to_string())
 }
 
 pub struct GiftStore(Mutex<HashMap<Uuid, Value>>);

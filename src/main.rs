@@ -45,7 +45,8 @@ async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clon
                 .service(day_twelve::random_board)
                 .service(day_sixteen::wrap)
                 .service(day_sixteen::unwrap)
-                .app_data(gift_store),
+                .app_data(gift_store)
+                .service(day_sixteen::decode),
         );
     };
 
