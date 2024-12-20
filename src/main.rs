@@ -1,5 +1,6 @@
 mod day_five;
 mod day_nine;
+mod day_nineteen;
 mod day_sixteen;
 mod day_start;
 mod day_twelve;
@@ -13,10 +14,18 @@ use actix_web::{
 use shuttle_actix_web::ShuttleActixWeb;
 
 #[shuttle_runtime::main]
-async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clone + 'static> {
+async fn main(
+    #[shuttle_shared_db::Postgres] pool: sqlx::PgPool,
+) -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clone + 'static> {
+    sqlx::migrate!()
+        .run(&pool)
+        .await
+        .expect("Failed to run migrations");
+
     let milk_crate = Data::new(day_nine::MilkCrate::new());
     let board_data = Data::new(day_twelve::board_data());
     let gift_store = Data::new(day_sixteen::GiftStore::new());
+    let pool_data = Data::new(pool);
     let config = move |cfg: &mut ServiceConfig| {
         cfg.service(
             actix_web::Scope::new("")
@@ -46,7 +55,13 @@ async fn main() -> ShuttleActixWeb<impl FnOnce(&mut ServiceConfig) + Send + Clon
                 .service(day_sixteen::wrap)
                 .service(day_sixteen::unwrap)
                 .app_data(gift_store)
-                .service(day_sixteen::decode),
+                .service(day_sixteen::decode)
+                .app_data(pool_data)
+                .service(day_nineteen::reset)
+                .service(day_nineteen::cite)
+                .service(day_nineteen::undo)
+                .service(day_nineteen::draft)
+                .service(day_nineteen::remove),
         );
     };
 
