@@ -1,8 +1,11 @@
+use std::{collections::HashMap, sync::Mutex};
+
 use actix_web::{
     delete, get, post, put,
     web::{self, Data, Path},
     HttpResponse, Responder,
 };
+use rand::Rng;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -106,4 +109,65 @@ pub async fn draft(pool: Data<PgPool>, quote: web::Json<QuoteDraft>) -> impl Res
     };
 
     HttpResponse::Created().json(quote)
+}
+
+#[derive(serde::Deserialize)]
+struct Token {
+    token: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+struct List {
+    next_token: Option<String>,
+    page: i32,
+    quotes: Vec<Quote>,
+}
+
+#[derive(Default)]
+pub struct TokenStore(Mutex<HashMap<String, i32>>);
+
+// /19/list
+#[get("/19/list")]
+pub async fn list(
+    pool: Data<PgPool>,
+    prev_token: web::Query<Token>,
+    token_store: Data<TokenStore>,
+) -> impl Responder {
+    let mut token_store = token_store.0.lock().unwrap();
+    let offset = match &prev_token.token {
+        Some(token) => token_store.remove(token),
+        None => Some(0),
+    };
+    let Some(offset) = offset else {
+        return HttpResponse::BadRequest().finish();
+    };
+
+    let quotes: Vec<Quote> =
+        sqlx::query_as("SELECT * FROM quotes ORDER BY created_at ASC LIMIT 4 OFFSET $1")
+            .bind(offset)
+            .fetch_all(&**pool)
+            .await
+            .expect("Failed to fetch quotes");
+
+    let next_token = if quotes.len() == 4 {
+        let new_token: String = rand::thread_rng()
+            .sample_iter(&rand::distributions::Alphanumeric)
+            .take(16)
+            .map(char::from)
+            .collect();
+        token_store.insert(new_token.clone(), offset + 3);
+        Some(new_token)
+    } else {
+        None
+    };
+
+    let page = offset / 3 + 1;
+    let quotes = quotes.into_iter().take(3).collect();
+    let list = List {
+        next_token,
+        page,
+        quotes,
+    };
+
+    HttpResponse::Ok().json(list)
 }

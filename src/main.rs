@@ -26,6 +26,7 @@ async fn main(
     let board_data = Data::new(day_twelve::board_data());
     let gift_store = Data::new(day_sixteen::GiftStore::new());
     let pool_data = Data::new(pool);
+    let token_store = Data::new(day_nineteen::TokenStore::default());
     let config = move |cfg: &mut ServiceConfig| {
         cfg.service(
             actix_web::Scope::new("")
@@ -61,7 +62,9 @@ async fn main(
                 .service(day_nineteen::cite)
                 .service(day_nineteen::undo)
                 .service(day_nineteen::draft)
-                .service(day_nineteen::remove),
+                .service(day_nineteen::remove)
+                .app_data(token_store)
+                .service(day_nineteen::list),
         );
     };
 
