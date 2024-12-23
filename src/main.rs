@@ -6,6 +6,7 @@ mod day_start;
 mod day_twelve;
 mod day_two;
 
+use actix_files::Files;
 use actix_web::{
     middleware::Logger,
     web::{Data, PathConfig, ServiceConfig},
@@ -64,7 +65,8 @@ async fn main(
                 .service(day_nineteen::draft)
                 .service(day_nineteen::remove)
                 .app_data(token_store)
-                .service(day_nineteen::list),
+                .service(day_nineteen::list)
+                .service(Files::new("/assets", "assets").show_files_listing()),
         );
     };
 

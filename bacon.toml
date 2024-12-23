@@ -4,4 +4,4 @@ need_stdout = true
 background = false
 on_change_strategy = "kill_then_restart"
 kill = ["kill", "-s", "INT"]
-env.RUST_LOG = "DEBUG"
+env.RUST_LOG = "DEBUG,h2=WARN,bollard=WARN,hyper=WARN,tower=WARN"
