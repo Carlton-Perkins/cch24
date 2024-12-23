@@ -4,6 +4,7 @@ mod day_nineteen;
 mod day_sixteen;
 mod day_start;
 mod day_twelve;
+mod day_twentythree;
 mod day_two;
 
 use actix_files::Files;
@@ -66,7 +67,8 @@ async fn main(
                 .service(day_nineteen::remove)
                 .app_data(token_store)
                 .service(day_nineteen::list)
-                .service(Files::new("/assets", "assets").show_files_listing()),
+                .service(Files::new("/assets", "assets").show_files_listing())
+                .service(day_twentythree::star),
         );
     };
 
