@@ -11,7 +11,7 @@ use actix_files::Files;
 use actix_web::{
     middleware::Logger,
     web::{Data, PathConfig, ServiceConfig},
-    HttpResponse,
+    HttpResponse, Scope,
 };
 use shuttle_actix_web::ShuttleActixWeb;
 
@@ -68,7 +68,18 @@ async fn main(
                 .app_data(token_store)
                 .service(day_nineteen::list)
                 .service(Files::new("/assets", "assets").show_files_listing())
-                .service(day_twentythree::star),
+                .service(day_twentythree::star)
+                .service(
+                    Scope::new("")
+                        .app_data(PathConfig::default().error_handler(|err, _req| {
+                            actix_web::error::InternalError::from_response(
+                                err,
+                                HttpResponse::ImATeapot().into(),
+                            )
+                            .into()
+                        }))
+                        .service(day_twentythree::present),
+                ),
         );
     };
 
