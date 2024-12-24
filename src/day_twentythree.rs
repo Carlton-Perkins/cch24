@@ -49,3 +49,43 @@ pub async fn present(color: Path<Color>) -> impl Responder {
       "#
     ))
 }
+
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum State {
+    On,
+    Off,
+}
+
+impl State {
+    fn next(self) -> Self {
+        match self {
+            State::On => State::Off,
+            State::Off => State::On,
+        }
+    }
+
+    fn as_str(&self) -> &'static str {
+        match self {
+            State::On => "on",
+            State::Off => "off",
+        }
+    }
+
+    fn to_render(&self) -> &'static str {
+        match self {
+            State::On => " on",
+            State::Off => "",
+        }
+    }
+}
+
+#[get("/23/ornament/{state}/{n}")]
+pub async fn ornament(state: Path<(State, String)>) -> impl Responder {
+    let (state, n) = state.into_inner();
+    let current_state = state.to_render();
+    let state = state.next().as_str();
+    HttpResponse::Ok().body(formatdoc! {r#"
+      <div class="ornament{current_state}" id="ornament{n}" hx-trigger="load delay:2s once" hx-get="/23/ornament/{state}/{n}" hx-swap="outerHTML"></div>
+      "#})
+}

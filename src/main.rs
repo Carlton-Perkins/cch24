@@ -78,7 +78,8 @@ async fn main(
                             )
                             .into()
                         }))
-                        .service(day_twentythree::present),
+                        .service(day_twentythree::present)
+                        .service(day_twentythree::ornament),
                 ),
         );
     };
