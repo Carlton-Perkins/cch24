@@ -83,6 +83,7 @@ impl State {
 #[get("/23/ornament/{state}/{n}")]
 pub async fn ornament(state: Path<(State, String)>) -> impl Responder {
     let (state, n) = state.into_inner();
+    let n = html_escape::encode_safe(&n);
     let current_state = state.to_render();
     let state = state.next().as_str();
     HttpResponse::Ok().body(formatdoc! {r#"
