@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 actix-files = "0.6.6"
 actix-web = "4.3.1"
+actix-multipart = "0.7.2"
 anyhow = "1.0.44"
 cargo-manifest = "0.17.0"
 chrono = "0.4.38"
@@ -24,3 +25,4 @@ sqlx = { version = "0.8.2", features = ["derive", "migrate", "uuid", "chrono"] }
 tokio = "1.26.0"
 toml = "0.5.11"
 uuid = "1.11.0"
+hex = "0.4.3"

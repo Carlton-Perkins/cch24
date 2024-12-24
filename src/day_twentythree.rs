@@ -1,4 +1,7 @@
-use actix_web::{get, web::Path, HttpResponse, Responder};
+use std::io::Read;
+
+use actix_multipart::form::{tempfile::TempFile, MultipartForm};
+use actix_web::{get, post, web::Path, HttpResponse, Responder};
 use indoc::formatdoc;
 use serde::Deserialize;
 
@@ -89,4 +92,74 @@ pub async fn ornament(state: Path<(State, String)>) -> impl Responder {
     HttpResponse::Ok().body(formatdoc! {r#"
       <div class="ornament{current_state}" id="ornament{n}" hx-trigger="load delay:2s once" hx-get="/23/ornament/{state}/{n}" hx-swap="outerHTML"></div>
       "#})
+}
+
+#[derive(MultipartForm)]
+struct Form {
+    #[multipart(rename = "lockfile")]
+    lockfile: TempFile,
+}
+
+#[derive(Debug, Deserialize)]
+struct Lockfile {
+    package: Vec<Package>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Package {
+    checksum: Option<String>,
+}
+
+#[post("/23/lockfile")]
+pub async fn lockfile(MultipartForm(form): MultipartForm<Form>) -> impl Responder {
+    let body = form
+        .lockfile
+        .file
+        .bytes()
+        .filter(|b| b.is_ok())
+        .map(|b| b.unwrap())
+        .collect::<Vec<u8>>();
+    let file: Lockfile = match toml::from_slice(&body) {
+        Ok(file) => file,
+        Err(err) => return HttpResponse::BadRequest().body(format!("invalid toml: {err:?}")),
+    };
+
+    let mut output = vec![];
+    for package in file.package {
+        let Some(sum) = package.checksum else {
+            continue;
+        };
+
+        let color = sum.get(0..6);
+        let top = sum.get(6..8);
+        let left = sum.get(8..10);
+        let (Some(color), Some(top), Some(left)) = (color, top, left) else {
+            return HttpResponse::UnprocessableEntity().body("invalid checksum");
+        };
+
+        if !color.chars().all(|c| c.is_ascii_hexdigit()) {
+            return HttpResponse::UnprocessableEntity().body("invalid hex color");
+        }
+
+        let top = hex::decode(top).unwrap()[0];
+        let left = hex::decode(left).unwrap()[0];
+        output.push(formatdoc! {
+          r#"<div style="background-color:#{color};top:{top}px;left:{left}px;"></div>"#,
+        });
+    }
+    let output = output.join("\n");
+    println!("{}", output);
+    HttpResponse::Ok().body(output)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_toml() {
+        let file = include_str!("../test-Cargo.lock");
+        let file: Lockfile = toml::from_str(file).unwrap();
+        dbg!(file);
+    }
 }
