@@ -12,7 +12,7 @@ cargo-manifest = "0.17.0"
 chrono = "0.4.38"
 html-escape = "0.2.13"
 indoc = "2"
-jsonwebtoken = "9.3.0"
+jsonwebtoken = "10.3.0"
 leaky-bucket = "1.1.2"
 rand = "0.8.5"
 serde = { version = "1.0.130", features = ["derive"] }
